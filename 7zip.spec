@@ -1,7 +1,7 @@
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
 Version: 22.01
-Release: 1
+Release: 2
 Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
 Source2: p7zip.1
