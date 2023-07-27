@@ -1,3 +1,5 @@
+%define _empty_manifest_terminate_build 0
+
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
 Version: 23.01
