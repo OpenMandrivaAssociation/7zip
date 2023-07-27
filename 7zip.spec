@@ -1,7 +1,9 @@
+%define _empty_manifest_terminate_build 0
+
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
-Version: 22.01
-Release: 2
+Version: 23.01
+Release: 1
 Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
 Source2: p7zip.1
