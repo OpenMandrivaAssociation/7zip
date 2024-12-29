@@ -1,9 +1,7 @@
-%undefine _debugsource_packages
-
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
 Version: 24.09
-Release: 1
+Release: 2
 Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
 Source2: p7zip.1
@@ -29,6 +27,7 @@ chmod -x DOC/*.txt
 # Inject CFLAGS
 sed -i 's/^ -fPIC/ -fPIC %{optflags} -fno-strict-aliasing/' CPP/7zip/7zip_gcc.mak
 sed -i 's/LFLAGS_ALL = -s/LFLAGS_ALL =/' CPP/7zip/7zip_gcc.mak
+sed -i 's/LFLAGS_STRIP = -s/LFLAGS_STRIP =/' CPP/7zip/7zip_gcc.mak
 sed -i 's/$(CXX) -o $(PROGPATH)/$(CXX) -Wl,-z,noexecstack -o $(PROGPATH)/' CPP/7zip/7zip_gcc.mak
 
 %if 0
