@@ -60,7 +60,7 @@ sed -i 's/RAR (if the non-free p7zip-rar package is installed)//g' %{buildroot}%
 
 %if ! %{?cross_compiling}
 %check
-echo Password |%{_bindir}/7z l %{S:5}
+echo Password |%{buildroot}%{_bindir}/7z l %{S:5}
 %endif
 
 %files
