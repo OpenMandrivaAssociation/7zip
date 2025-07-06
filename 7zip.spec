@@ -34,7 +34,9 @@ sed -i 's/LFLAGS_STRIP = -s/LFLAGS_STRIP =/' CPP/7zip/7zip_gcc.mak
 sed -i 's/$(CXX) -o $(PROGPATH)/$(CXX) -Wl,-z,noexecstack -o $(PROGPATH)/' CPP/7zip/7zip_gcc.mak
 
 %build
+%ifarch %{x86_64}
 . %{_sysconfdir}/profile.d/asmc-profile.sh
+%endif
 
 cd CPP/7zip/Bundles/Alone2
 %ifarch %{x86_64}
