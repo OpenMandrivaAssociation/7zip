@@ -1,7 +1,7 @@
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
-Version: 24.09
-Release: 3
+Version: 25.00
+Release: 1
 Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
 Source2: p7zip.1
@@ -13,7 +13,7 @@ URL: https://www.7-zip.org/
 License: BSD-3-Clause AND LGPL-2.1-or-later
 Group: Archiving/Compression
 %ifarch %{x86_64}
-BuildRequires: uasm
+BuildRequires: asmc
 %endif
 BuildRequires: dos2unix
 BuildRequires: make
@@ -34,16 +34,28 @@ sed -i 's/LFLAGS_STRIP = -s/LFLAGS_STRIP =/' CPP/7zip/7zip_gcc.mak
 sed -i 's/$(CXX) -o $(PROGPATH)/$(CXX) -Wl,-z,noexecstack -o $(PROGPATH)/' CPP/7zip/7zip_gcc.mak
 
 %build
+. %{_sysconfdir}/profile.d/asmc-profile.sh
+
 cd CPP/7zip/Bundles/Alone2
-# FIXME we may want to enable hand-crafted asm code by using
-# cmpl_clang_x64.mak
-# cmpl_clang_x86.mak
-# cmpl_clang_arm64.mak
-# Just make sure it doesn't break the test case checked for in %%check
-if echo %{__cc} |grep -q clang; then
-	%make_build -f ../../cmpl_clang.mak
+%ifarch %{x86_64}
+PLAT=_x64
+%else
+%ifarch %{aarch64}
+PLAT=_arm64
+%else
+%ifarch %{arm}
+PLAT=_arm
+%else
+%ifarch %{ix86}
+PLAT=_x86
+%endif
+%endif
+%endif
+%endif
+if %{__cc} --version |grep -q clang; then
+	%make_build -f ../../cmpl_clang$PLAT.mak $EXTRAARGS
 else
-	%make_build -f ../../cmpl_gcc.mak
+	%make_build -f ../../cmpl_gcc$PLAT.mak $EXTRAARGS
 fi
 
 %install
