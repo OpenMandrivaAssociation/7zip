@@ -75,3 +75,14 @@ diff -up 7zip-25.01/CPP/7zip/Archive/Udf/UdfIn.cpp.omv~ 7zip-25.01/CPP/7zip/Arch
    return res;
  }
  
+diff -up 7zip-25.01/Asm/arm64/7zAsm.S.omv~ 7zip-25.01/Asm/arm64/7zAsm.S
+--- 7zip-25.01/Asm/arm64/7zAsm.S.omv~	2025-11-01 20:04:48.710406874 +0000
++++ 7zip-25.01/Asm/arm64/7zAsm.S	2025-11-01 20:05:17.480532677 +0000
+@@ -37,6 +37,7 @@
+ #define  REG_ABI_PARAM_1 r1
+ #define  REG_ABI_PARAM_2 r2
+ 
++#pragma GCC diagnostic ignored "-Wc++-keyword"
+ 
+ .macro p2_add reg:req, param:req
+         add     \reg, \reg, \param
