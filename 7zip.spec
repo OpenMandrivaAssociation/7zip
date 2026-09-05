@@ -1,6 +1,6 @@
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
-Version: 26.02
+Version: 26.03
 Release: 1
 Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
@@ -17,6 +17,8 @@ BuildRequires: asmc
 %endif
 BuildRequires: dos2unix
 BuildRequires: make
+# llvm-profdata for the %pgo merge step
+BuildRequires: llvm
 Obsoletes: p7zip < %{EVRD}
 
 %patchlist
@@ -29,16 +31,24 @@ extracting various formats.
 %autosetup -p1 -c -n %{name}-%{version}
 dos2unix DOC/*.txt
 chmod -x DOC/*.txt
-# Inject CFLAGS
-sed -i 's/^ -fPIC/ -fPIC %{optflags} -fno-strict-aliasing/' CPP/7zip/7zip_gcc.mak
+# Expand flags at compile/link time so %pgo generate/use flags apply.
+# The makefile overwrites CFLAGS/LDFLAGS; rpm's script header also resets
+# RPM_OPT_FLAGS, so pick up PGO flags from CFLAGS/LDFLAGS in %build.
+sed -i 's/^ -fPIC/ -fPIC $(RPM_PGO_CFLAGS) -fno-strict-aliasing/' CPP/7zip/7zip_gcc.mak
 sed -i 's/LFLAGS_ALL = -s/LFLAGS_ALL =/' CPP/7zip/7zip_gcc.mak
 sed -i 's/LFLAGS_STRIP = -s/LFLAGS_STRIP =/' CPP/7zip/7zip_gcc.mak
+sed -i 's/^LFLAGS_ALL = /LFLAGS_ALL = $(RPM_LD_FLAGS) /' CPP/7zip/7zip_gcc.mak
 sed -i 's/$(CXX) -o $(PROGPATH)/$(CXX) -Wl,-z,noexecstack -o $(PROGPATH)/' CPP/7zip/7zip_gcc.mak
+# Clang 23+ -Weverything -Werror: annotation suggestion, not a real defect
+echo 'CFLAGS_WARN += -Wno-unknown-warning-option -Wno-lifetime-safety -Wno-lifetime-safety-intra-tu-suggestions -Wno-lifetime-safety-cross-tu-suggestions' >> CPP/7zip/warn_clang.mak
 
 %build
 %ifarch %{x86_64}
 . %{_sysconfdir}/profile.d/asmc-profile.sh
 %endif
+# PGO setenv CFLAGS/LDFLAGS; rpm script header resets RPM_OPT_FLAGS
+export RPM_PGO_CFLAGS="${CFLAGS:-${RPM_OPT_FLAGS}}"
+export RPM_LD_FLAGS="${LDFLAGS:-${RPM_LD_FLAGS}}"
 
 cd CPP/7zip/Bundles/Alone2
 %ifarch %{x86_64}
@@ -61,6 +71,37 @@ if %{__cc} --version |grep -q clang; then
 else
 	%make_build -f ../../cmpl_gcc$PLAT.mak $EXTRAARGS
 fi
+
+# Compress/extract/list/hash across common formats; also list the known crasher
+%pgo
+bin=
+for f in CPP/7zip/Bundles/Alone2/b/*/7zz; do
+	[ -x "$f" ] && bin=$f && break
+done
+if [ -z "$bin" ]; then
+	echo "PGO: instrumented 7zz not found" >&2
+	exit 1
+fi
+tdir=$(mktemp -d)
+trap 'rm -rf "$tdir"' EXIT
+mkdir -p "$tdir/in"
+cp -a DOC C CPP/7zip/Common CPP/7zip/Compress CPP/7zip/Archive/7z "$tdir/in/"
+dd if=/dev/urandom of="$tdir/in/rand.bin" bs=64k count=16 status=none
+"$bin" a -bd -mx1 -mmt=on "$tdir/fast.7z" "$tdir/in"
+"$bin" a -bd -mx5 -mmt=on "$tdir/norm.7z" "$tdir/in"
+"$bin" a -bd -tzip -mx5 -mmt=on "$tdir/a.zip" "$tdir/in"
+"$bin" a -bd -tgzip -mx5 "$tdir/a.gz" "$tdir/in/DOC/readme.txt"
+"$bin" a -bd -txz -mx5 "$tdir/a.xz" "$tdir/in/DOC/readme.txt"
+"$bin" a -bd -ttar "$tdir/a.tar" "$tdir/in"
+"$bin" t -bd "$tdir/fast.7z"
+"$bin" t -bd "$tdir/norm.7z"
+"$bin" t -bd "$tdir/a.zip"
+"$bin" l -bd "$tdir/norm.7z"
+"$bin" x -bd -o"$tdir/o1" "$tdir/fast.7z"
+"$bin" x -bd -o"$tdir/o2" "$tdir/a.zip"
+"$bin" x -bd -o"$tdir/o3" "$tdir/a.tar"
+"$bin" h -bd "$tdir/in"
+echo Password | "$bin" l -bd -bb0 %{S:5} >/dev/null || :
 
 %install
 install -Dm 755 CPP/7zip/Bundles/Alone2/b/*/7zz %{buildroot}%{_bindir}/7zz
