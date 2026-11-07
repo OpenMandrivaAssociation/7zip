@@ -1,8 +1,9 @@
 %define undotted_version %(echo %{version} |sed -e 's,\\\.,,g')
 Name: 7zip
-Version: 26.05
+Version: 26.06
 Release: 1
-Source0: https://www.7-zip.org/a/7z%{undotted_version}-src.tar.xz
+# 7-zip.org/a stopped publishing the source archive with 26.06.
+Source0: https://github.com/ip7z/7zip/releases/download/%{version}/7z%{undotted_version}-src.tar.xz
 Source1: p7zip
 Source2: p7zip.1
 # Known to crash 7zip 24.09 on znver1 if
